@@ -11,60 +11,66 @@ pub mod sys {
 }
 
 fn main() {
-    unsafe {
-        // Set up a biome generator that reflects the biome generation of
-        // Minecraft 1.18.
-        let mut generator: MaybeUninit<sys::Generator> = MaybeUninit::uninit();
-        sys::setupGenerator(
-            generator.as_mut_ptr(),
-            sys::MCversion_MC_1_18 as _,
-            sys::LARGE_BIOMES,
-        );
-        let mut generator = generator.assume_init();
+    let num_cpus = num_cpus::get();
+    println!("running on {} cpus", num_cpus);
 
-        // Seeds are internally represented as unsigned 64-bit integers.
-        let mut seed: u64 = 0;
-        let mut rng = rand_xorshift::XorShiftRng::from_seed(rand::random());
-        loop {
-            seed = rng.next_u64();
+    let join_handles: Vec<_> = (0..num_cpus)
+        .map(|_| std::thread::spawn(|| unsafe { run_it() }))
+        .collect();
 
-            // Apply the seed to the generator for the Overworld dismension.
-            sys::applySeed(&mut generator, 0, seed);
+    for h in join_handles {
+        h.join().unwrap();
+    }
+}
 
-            // To get the biome at a single block position, we can use getBiomeAt().
-            let scale = 1; // scale=1: block coordinates, scale=4: biome coordinates
-            let x = 0;
-            let y = 63;
-            let z = 0;
+unsafe fn run_it() {
+    let mut generator: MaybeUninit<sys::Generator> = MaybeUninit::uninit();
+    sys::setupGenerator(
+        generator.as_mut_ptr(),
+        sys::MCversion_MC_1_18 as _,
+        sys::LARGE_BIOMES,
+    );
+    let mut generator = generator.assume_init();
 
-            let mut count = 0;
-            let origin = sys::getBiomeAt(&mut generator, scale, 0, 63, 0);
-            if origin == sys::BiomeID_mushroom_fields {
-                count += 1;
-            } else {
-                continue;
-            }
-            let tl = sys::getBiomeAt(&mut generator, scale, -8192, 63, -8192);
-            let tr = sys::getBiomeAt(&mut generator, scale, -8192, 63, 8192);
-            let bl = sys::getBiomeAt(&mut generator, scale, 8192, 63, -8192);
-            let br = sys::getBiomeAt(&mut generator, scale, 8192, 63, 8192);
+    // Seeds are internally represented as unsigned 64-bit integers.
+    let mut seed: u64 = 0;
+    let mut rng = rand_xorshift::XorShiftRng::from_seed(rand::random());
+    loop {
+        seed = rng.next_u64();
 
-            if tl == sys::BiomeID_giant_tree_taiga {
-                count += 1;
-            }
-            if tr == sys::BiomeID_iceMountains {
-                count += 1;
-            }
-            if bl == sys::BiomeID_desert {
-                count += 1;
-            }
-            if br == sys::BiomeID_jungle {
-                count += 1;
-            }
+        sys::applySeed(&mut generator, 0, seed);
 
-            if count > 2 {
-                println!("seed {} satisfies {}/5", seed, count);
-            }
+        let scale = 1;
+        let x = 0;
+        let y = 63;
+        let z = 0;
+
+        let mut count = 0;
+        let origin = getCategoryAt(&mut generator, 0, 0);
+        if origin != sys::BiomeID_mushroom_fields {
+            continue;
         }
+        let tl = getCategoryAt(&mut generator, -8192, -8192);
+        let tr = getCategoryAt(&mut generator, -8192, 8192);
+        let bl = getCategoryAt(&mut generator, 8192, -8192);
+        let br = getCategoryAt(&mut generator, 8192, 8192);
+
+        let corners = [tl, tr, bl, br];
+        let have_jungle = corners.contains(&sys::BiomeID_jungle);
+        let have_desert = corners.contains(&sys::BiomeID_desert);
+        let have_ice = corners.contains(&sys::BiomeID_snowy_tundra);
+        let have_mesa = corners.contains(&sys::BiomeID_mesa) || corners.contains(&sys::BiomeID_badlands_plateau);
+
+        let count = 1 + (have_jungle as u32) + (have_desert as u32) + (have_ice as u32) + (have_mesa as u32);
+
+        if count > 4 {
+            println!("seed {} satisfies {}/5", seed, count);
+        }
+    }
+}
+
+fn getCategoryAt(g: &mut sys::Generator, x: i32, y: i32) -> i32 {
+    unsafe {
+        sys::getCategory(sys::MCversion_MC_1_18 as _, sys::getBiomeAt(g, 1, x, 63, y))
     }
 }

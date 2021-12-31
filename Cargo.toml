@@ -10,7 +10,11 @@ readme = "README.md"
 edition = "2021"
 build = "build.rs"
 
+[profile.release]
+lto = "fat"
+
 [dependencies]
+num_cpus = "1.13.1"
 rand = "0.8.4"
 rand_xorshift = "0.3.0"
 
