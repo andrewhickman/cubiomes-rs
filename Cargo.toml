@@ -5,10 +5,17 @@ version = "0.0.0"
 authors = ["Andrew Hickman <andrew.hickman1@sky.com>"]
 repository = "https://github.com/andrewhickman/cubiomes-rs"
 documentation = "https://docs.rs/cubiomes-rs"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
+build = "build.rs"
 
 [dependencies]
+rand = "0.8.4"
+rand_xorshift = "0.3.0"
 
 [dev-dependencies]
+
+[build-dependencies]
+bindgen = "0.59.2"
+cc = "1.0.72"
