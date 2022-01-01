@@ -1,14 +1,11 @@
-use std::mem::MaybeUninit;
-use rand::SeedableRng;
 use rand::RngCore;
+use rand::SeedableRng;
+use std::mem::MaybeUninit;
 
-pub mod sys {
-    #![allow(non_upper_case_globals)]
-    #![allow(non_camel_case_types)]
-    #![allow(non_snake_case)]
-
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-}
+#[allow(non_upper_case_globals)]
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+pub mod sys;
 
 fn main() {
     let num_cpus = num_cpus::get();
@@ -59,9 +56,14 @@ unsafe fn run_it() {
         let have_jungle = corners.contains(&sys::BiomeID_jungle);
         let have_desert = corners.contains(&sys::BiomeID_desert);
         let have_ice = corners.contains(&sys::BiomeID_snowy_tundra);
-        let have_mesa = corners.contains(&sys::BiomeID_mesa) || corners.contains(&sys::BiomeID_badlands_plateau);
+        let have_mesa = corners.contains(&sys::BiomeID_mesa)
+            || corners.contains(&sys::BiomeID_badlands_plateau);
 
-        let count = 1 + (have_jungle as u32) + (have_desert as u32) + (have_ice as u32) + (have_mesa as u32);
+        let count = 1
+            + (have_jungle as u32)
+            + (have_desert as u32)
+            + (have_ice as u32)
+            + (have_mesa as u32);
 
         if count > 4 {
             println!("seed {} satisfies {}/5", seed, count);
@@ -70,7 +72,5 @@ unsafe fn run_it() {
 }
 
 fn getCategoryAt(g: &mut sys::Generator, x: i32, y: i32) -> i32 {
-    unsafe {
-        sys::getCategory(sys::MCversion_MC_1_18 as _, sys::getBiomeAt(g, 1, x, 63, y))
-    }
+    unsafe { sys::getCategory(sys::MCversion_MC_1_18 as _, sys::getBiomeAt(g, 1, x, 63, y)) }
 }
